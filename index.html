@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .card-flip { transition: transform 0.6s; transform-style: preserve-3d; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
+
+    <header class="bg-white shadow-sm p-4 sticky top-0 z-10">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold text-indigo-600 flex items-center gap-2">
+                🎓 StudyAI <span class="text-xs bg-indigo-100 px-2 py-1 rounded-full uppercase tracking-wider">Beta</span>
+            </h1>
+            <div id="nav-tabs" class="hidden flex gap-4">
+                <button onclick="switchTab('quiz')" class="px-4 py-2 font-medium border-b-2 border-indigo-600 text-indigo-600">📝 Quiz</button>
+                <button onclick="switchTab('flashcards')" class="px-4 py-2 font-medium text-gray-500 hover:text-indigo-600">🎴 Flashcards</button>
+            </div>
+            <button id="btn-change-doc" class="hidden text-sm text-gray-500 hover:underline" onclick="resetApp()">📄 Cambiar documento</button>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-6">
+        
+        <section id="screen-upload" class="bg-white rounded-2xl shadow-xl p-10 text-center fade-in border-2 border-dashed border-gray-200 mt-10">
+            <div class="mb-6">
+                <span class="text-6xl text-indigo-200">📄</span>
+            </div>
+            <h2 class="text-2xl font-bold mb-4">Sube un documento para empezar a generar preguntas de repaso</h2>
+            <p class="text-gray-500 mb-8">Formatos aceptados: PDF, TXT o MD</p>
+            
+            <input type="file" id="file-input" class="hidden" accept=".pdf,.txt,.md">
+            <label for="file-input" class="bg-indigo-600 text-white px-8 py-3 rounded-xl cursor-pointer hover:bg-indigo-700 transition font-semibold">
+                Seleccionar archivo
+            </label>
+            
+            <div id="file-ready" class="hidden mt-8 p-4 bg-green-50 rounded-lg inline-block border border-green-200">
+                <p class="text-green-700 font-medium">✅ <span id="filename">archivo.pdf</span> cargado</p>
+                <button onclick="startApp()" class="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold block mx-auto">
+                    Empezar
+                </button>
+            </div>
+        </section>
+
+        <section id="screen-quiz" class="hidden fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex gap-4">
+                    <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold">✅ <span id="score-correct">0</span></span>
+                    <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full font-bold">❌ <span id="score-wrong">0</span></span>
+                </div>
+                <button onclick="showResults()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg font-medium">Ver resultado</button>
+            </div>
+
+            <div id="quiz-container" class="bg-white p-8 rounded-2xl shadow-md">
+                <div id="quiz-loading" class="text-center py-10">
+                    <p class="text-indigo-600 animate-pulse font-medium">🧠 Generando pregunta dinámica...</p>
+                </div>
+                <div id="quiz-content" class="hidden">
+                    <span id="quiz-section" class="text-xs uppercase font-bold text-indigo-400 tracking-widest block mb-2">SECCIÓN: INTRODUCCIÓN</span>
+                    <h3 id="quiz-question" class="text-xl font-bold mb-6">¿Cuál es la idea principal del texto?</h3>
+                    
+                    <div id="quiz-options" class="space-y-3 mb-6">
+                        </div>
+
+                    <div id="quiz-feedback" class="hidden p-4 rounded-xl mb-6">
+                        <p id="feedback-text" class="font-bold mb-1"></p>
+                        <p id="feedback-explanation" class="text-sm text-gray-600 mb-2"></p>
+                        <p class="text-xs font-mono bg-white bg-opacity-50 p-2 rounded italic">🔎 Fuente: "<span id="feedback-source"></span>"</p>
+                    </div>
+
+                    <button id="btn-next-question" onclick="generateQuestion()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 hidden">
+                        Siguiente pregunta →
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="screen-flashcards" class="hidden fade-in">
+            <div class="max-w-md mx-auto">
+                <div id="flashcard" class="bg-white min-h-[300px] rounded-3xl shadow-2xl p-10 flex flex-col justify-center items-center text-center cursor-pointer mb-8 border-b-8 border-indigo-200">
+                    <span id="fc-section" class="text-xs font-bold text-indigo-400 absolute top-8">APARTADO: DEFINICIONES</span>
+                    <div id="fc-content">
+                        <h3 id="fc-front" class="text-2xl font-bold">Término a definir</h3>
+                        <p id="fc-back" class="hidden mt-4 text-gray-600 text-lg border-t pt-4">Esta es la explicación detallada del concepto.</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button id="btn-fc-reveal" onclick="revealFlashcard()" class="flex-1 bg-white border-2 border-indigo-600 text-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-50">Mostrar respuesta</button>
+                    <button onclick="generateFlashcard()" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700">Siguiente tarjeta</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="screen-results" class="hidden fade-in text-center">
+            <h2 class="text-3xl font-bold mb-2">¡Ronda terminada! 🏆</h2>
+            <div class="text-5xl font-black text-indigo-600 mb-8" id="final-score">80%</div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left mb-10">
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <h4 class="font-bold border-b pb-2 mb-4 flex items-center gap-2">📋 APARTADOS PREGUNTADOS</h4>
+                    <ul id="list-sections" class="text-sm space-y-2 text-gray-600"></ul>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-orange-400">
+                    <h4 class="font-bold border-b pb-2 mb-4 flex items-center gap-2 text-orange-700">⚠️ REPASAR</h4>
+                    <ul id="list-review" class="text-sm space-y-2 text-gray-600"></ul>
+                </div>
+            </div>
+
+            <button onclick="startApp()" class="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-bold text-lg hover:bg-indigo-700 transition shadow-lg">
+                Nueva ronda
+            </button>
+        </section>
+
+    </main>
+
+    <script>
+        // Variables de estado
+        let docName = "";
+        let stats = { correct: 0, total: 0, history: [] };
+        let sectionErrors = {};
+
+        // Manejo de archivos
+        document.getElementById('file-input').addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                docName = e.target.files[0].name;
+                document.getElementById('filename').textContent = docName;
+                document.getElementById('file-ready').classList.remove('hidden');
+            }
+        });
+
+        function startApp() {
+            stats = { correct: 0, total: 0, history: [] };
+            sectionErrors = {};
+            updateScoreUI();
+            
+            document.getElementById('screen-upload').classList.add('hidden');
+            document.getElementById('screen-results').classList.add('hidden');
+            document.getElementById('nav-tabs').classList.remove('hidden');
+            document.getElementById('btn-change-doc').classList.remove('hidden');
+            
+            switchTab('quiz');
+        }
+
+        function resetApp() {
+            location.reload();
+        }
+
+        function switchTab(tab) {
+            document.getElementById('screen-quiz').classList.add('hidden');
+            document.getElementById('screen-flashcards').classList.add('hidden');
+            
+            const buttons = document.querySelectorAll('#nav-tabs button');
+            buttons.forEach(b => {
+                b.classList.remove('border-b-2', 'border-indigo-600', 'text-indigo-600');
+                b.classList.add('text-gray-500');
+            });
+
+            if(tab === 'quiz') {
+                document.getElementById('screen-quiz').classList.remove('hidden');
+                buttons[0].classList.add('border-b-2', 'border-indigo-600', 'text-indigo-600');
+                generateQuestion();
+            } else {
+                document.getElementById('screen-flashcards').classList.remove('hidden');
+                buttons[1].classList.add('border-b-2', 'border-indigo-600', 'text-indigo-600');
+                generateFlashcard();
+            }
+        }
+
+        // LÓGICA DE SIMULACIÓN DE IA (PARA EL CANVAS)
+        // Aquí es donde el modelo Gemini toma el control real cuando el usuario sube el archivo.
+        
+        function generateQuestion() {
+            // Animación de carga
+            document.getElementById('quiz-content').classList.add('hidden');
+            document.getElementById('quiz-loading').classList.remove('hidden');
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            document.getElementById('btn-next-question').classList.add('hidden');
+
+            // Simulación de respuesta de IA (En ejecución real, Gemini genera esto)
+            setTimeout(() => {
+                document.getElementById('quiz-loading').classList.add('hidden');
+                document.getElementById('quiz-content').classList.remove('hidden');
+                
+                // NOTA: En la interacción real, aquí es donde inyecto el texto generado por la IA basado en el PDF
+                renderQuestionUI({
+                    section: "Fundamentos Técnicos",
+                    q: "¿Cuál de los siguientes no es un componente principal del sistema descrito?",
+                    options: ["Sensor de presión", "Módulo de refrigeración", "Batería de polímero", "Alternador externo"],
+                    correct: 3,
+                    explanation: "El documento especifica que el sistema es autosuficiente y no requiere un alternador externo.",
+                    source: "El sistema opera mediante una batería de polímero integrada, eliminando la necesidad de alternadores externos."
+                });
+            }, 800);
+        }
+
+        function renderQuestionUI(data) {
+            document.getElementById('quiz-section').textContent = `SECCIÓN: ${data.section}`;
+            document.getElementById('quiz-question').textContent = data.q;
+            
+            const optionsDiv = document.getElementById('quiz-options');
+            optionsDiv.innerHTML = "";
+            
+            data.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-indigo-200 transition bg-gray-50 font-medium";
+                btn.textContent = opt;
+                btn.onclick = () => checkAnswer(idx, data);
+                optionsDiv.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(idx, data) {
+            if (document.getElementById('btn-next-question').classList.contains('hidden') === false) return;
+
+            const feedback = document.getElementById('quiz-feedback');
+            const btns = document.getElementById('quiz-options').children;
+            
+            stats.total++;
+            
+            if (idx === data.correct) {
+                stats.correct++;
+                feedback.className = "p-4 rounded-xl mb-6 bg-green-100 text-green-800";
+                document.getElementById('feedback-text').textContent = "✅ ¡Correcto!";
+                btns[idx].classList.add('bg-green-500', 'text-white', 'border-green-500');
+            } else {
+                if(!sectionErrors[data.section]) sectionErrors[data.section] = 0;
+                sectionErrors[data.section]++;
+                feedback.className = "p-4 rounded-xl mb-6 bg-red-100 text-red-800";
+                document.getElementById('feedback-text').textContent = "❌ Incorrecto";
+                btns[idx].classList.add('bg-red-500', 'text-white', 'border-red-500');
+                btns[data.correct].classList.add('bg-green-200', 'border-green-400');
+            }
+
+            document.getElementById('feedback-explanation').textContent = data.explanation;
+            document.getElementById('feedback-source').textContent = data.source;
+            feedback.classList.remove('hidden');
+            document.getElementById('btn-next-question').classList.remove('hidden');
+            
+            updateScoreUI();
+        }
+
+        function updateScoreUI() {
+            document.getElementById('score-correct').textContent = stats.correct;
+            document.getElementById('score-wrong').textContent = stats.total - stats.correct;
+        }
+
+        function generateFlashcard() {
+            document.getElementById('fc-back').classList.add('hidden');
+            document.getElementById('btn-fc-reveal').classList.remove('hidden');
+            // Simulación de IA para Flashcards
+            document.getElementById('fc-section').textContent = "APARTADO: CONCEPTOS CLAVE";
+            document.getElementById('fc-front').textContent = "Latencia de red";
+            document.getElementById('fc-back').textContent = "Tiempo que tarda un paquete de datos en viajar desde su origen hasta su destino a través de la red.";
+        }
+
+        function revealFlashcard() {
+            document.getElementById('fc-back').classList.remove('hidden');
+            document.getElementById('btn-fc-reveal').classList.add('hidden');
+        }
+
+        function showResults() {
+            document.getElementById('screen-quiz').classList.add('hidden');
+            document.getElementById('screen-flashcards').classList.add('hidden');
+            document.getElementById('nav-tabs').classList.add('hidden');
+            document.getElementById('screen-results').classList.remove('hidden');
+
+            const percent = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+            document.getElementById('final-score').textContent = `${percent}%`;
+
+            // Listar secciones (Simulación)
+            const sections = ["Introducción", "Capítulo 1", "Fundamentos Técnicos", "Conclusión"];
+            const listSec = document.getElementById('list-sections');
+            listSec.innerHTML = sections.map(s => `<li>• ${s}</li>`).join('');
+
+            // Listar para repasar
+            const listRev = document.getElementById('list-review');
+            const sortedErrors = Object.entries(sectionErrors).sort((a,b) => b[1] - a[1]);
+            if(sortedErrors.length > 0) {
+                listRev.innerHTML = sortedErrors.map(e => `<li class="flex justify-between font-medium"><span>${e[0]}</span> <span class="text-red-500">${e[1]} fallos</span></li>`).join('');
+            } else {
+                listRev.innerHTML = "<li class="italic text-green-600">¡Buen trabajo! No tienes fallos críticos por ahora.</li>";
+            }
+        }
+    </script>
+</body>
+</html>
