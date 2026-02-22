@@ -145,5 +145,18 @@
         }
 
         async function generateFlashcard() {
-            const data = await askGemini("Genera una flashcard
+            const data = await askGemini("Genera una flashcard. JSON: { \"front\": \"Concepto\", \"back\": \"Definición\" }");
+            document.getElementById('fc-front').textContent = data.front;
+            document.getElementById('fc-back').textContent = data.back;
+            document.getElementById('fc-back').classList.add('hidden');
+        }
 
+        function switchTab(tab) {
+            document.getElementById('screen-quiz').classList.toggle('hidden', tab !== 'quiz');
+            document.getElementById('screen-flashcards').classList.toggle('hidden', tab !== 'flashcards');
+            if(tab === 'quiz') generateQuestion();
+            if(tab === 'flashcards') generateFlashcard();
+        }
+    </script>
+</body>
+</html>
