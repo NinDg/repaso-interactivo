@@ -3,146 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Study Master - Live</title>
+    <title>AI Study Master - Completo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .loading-ring { border: 4px solid #f3f3f3; border-top: 4px solid #4f46e5; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans text-gray-800">
 
-    <header class="bg-white shadow-sm p-4 sticky top-0 z-10">
+    <header class="bg-white shadow-md p-4 sticky top-0 z-20">
         <div class="max-w-4xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold text-indigo-600">🎓 StudyAI</h1>
-            <div id="nav-tabs" class="hidden flex gap-4">
-                <button onclick="switchTab('quiz')" id="tab-quiz" class="px-4 py-2 font-medium border-b-2 border-indigo-600 text-indigo-600">📝 Quiz</button>
-                <button onclick="switchTab('flashcards')" id="tab-fc" class="px-4 py-2 font-medium text-gray-500 hover:text-indigo-600">🎴 Flashcards</button>
+            <h1 class="text-xl font-bold text-indigo-600 flex items-center gap-2">🎓 StudyAI</h1>
+            <div id="nav-tabs" class="hidden flex gap-2 sm:gap-4">
+                <button onclick="switchTab('quiz')" id="btn-tab-quiz" class="px-3 py-2 rounded-lg font-bold text-indigo-600 bg-indigo-50">📝 Quiz</button>
+                <button onclick="switchTab('flashcards')" id="btn-tab-fc" class="px-3 py-2 rounded-lg font-bold text-gray-500 hover:bg-gray-100">🎴 Flashcards</button>
             </div>
-            <button id="btn-change-doc" class="hidden text-sm text-gray-500 hover:underline" onclick="location.reload()">📄 Cambiar documento</button>
+            <button class="text-sm text-gray-400 hover:text-red-500" onclick="location.reload()">📄 Salir</button>
         </div>
     </header>
 
-    <main class="max-w-4xl mx-auto p-6">
-        <section id="screen-upload" class="bg-white rounded-2xl shadow-xl p-10 text-center border-2 border-dashed border-gray-200 mt-10">
-            <div class="mb-6 text-6xl">📄</div>
-            <h2 class="text-2xl font-bold mb-4">Sube tu documento de curso</h2>
+    <main class="max-w-3xl mx-auto p-6">
+        
+        <section id="screen-upload" class="bg-white rounded-3xl shadow-xl p-10 text-center fade-in mt-10 border-2 border-indigo-50">
+            <div class="text-6xl mb-6">📚</div>
+            <h2 class="text-2xl font-bold mb-2">Prepara tu sesión de estudio</h2>
+            <p class="text-gray-500 mb-8 text-sm">Sube un PDF para que la IA genere tus preguntas</p>
+            
             <input type="file" id="file-input" class="hidden" accept=".pdf,.txt,.md">
-            <label for="file-input" class="bg-indigo-600 text-white px-8 py-3 rounded-xl cursor-pointer hover:bg-indigo-700 font-semibold">Seleccionar archivo</label>
-            <div id="file-ready" class="hidden mt-8 p-4 bg-green-50 rounded-lg inline-block border border-green-200 text-green-700">
-                ✅ Documento cargado correctamente
-                <button onclick="startApp()" class="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold block mx-auto">Empezar Repaso</button>
+            <label for="file-input" id="label-input" class="bg-indigo-600 text-white px-8 py-4 rounded-2xl cursor-pointer hover:bg-indigo-700 transition-all font-bold shadow-lg inline-block">
+                📁 Seleccionar Documento
+            </label>
+            
+            <div id="file-ready" class="hidden mt-8 p-6 bg-green-50 rounded-2xl border border-green-200 fade-in">
+                <p class="text-green-700 font-bold mb-4">✅ Documento cargado con éxito</p>
+                <button onclick="startApp()" class="w-full bg-green-600 text-white py-3 rounded-xl font-black hover:bg-green-700 shadow-md">
+                    ¡EMPEZAR AHORA!
+                </button>
             </div>
         </section>
 
-        <section id="screen-quiz" class="hidden">
-            <div id="quiz-loading" class="hidden text-center py-20 text-indigo-600 animate-pulse font-medium">🧠 La IA está analizando tu PDF...</div>
-            <div id="quiz-content" class="bg-white p-8 rounded-2xl shadow-md">
-                <span id="quiz-section" class="text-xs font-bold text-indigo-400 block mb-2 tracking-widest uppercase"></span>
-                <h3 id="quiz-question" class="text-xl font-bold mb-6"></h3>
-                <div id="quiz-options" class="space-y-3 mb-6"></div>
-                <div id="quiz-feedback" class="hidden p-4 rounded-xl mb-6 font-medium"></div>
-                <button id="btn-next-question" onclick="generateQuestion()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hidden">Siguiente pregunta →</button>
+        <section id="screen-quiz" class="hidden fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex gap-3 text-sm font-bold">
+                    <span class="bg-green-100 text-green-700 px-4 py-2 rounded-xl border border-green-200">✅ <span id="score-correct">0</span></span>
+                    <span class="bg-red-100 text-red-700 px-4 py-2 rounded-xl border border-red-200">❌ <span id="score-wrong">0</span></span>
+                </div>
+                <button onclick="showResults()" class="text-gray-500 font-bold hover:text-indigo-600">Ver Resumen 🏁</button>
+            </div>
+
+            <div class="bg-white p-8 rounded-3xl shadow-lg min-h-[400px] relative">
+                <div id="quiz-loading" class="hidden flex flex-col items-center justify-center py-20">
+                    <div class="loading-ring mb-4"></div>
+                    <p class="text-indigo-500 font-bold animate-pulse">La IA está leyendo tu PDF...</p>
+                </div>
+
+                <div id="quiz-content">
+                    <div id="quiz-meta" class="mb-4">
+                        <span id="quiz-section" class="bg-indigo-100 text-indigo-700 text-[10px] uppercase px-3 py-1 rounded-full font-black tracking-tighter">SECCIÓN DETECTADA</span>
+                    </div>
+                    <h3 id="quiz-question" class="text-xl font-bold mb-8 leading-tight">La pregunta aparecerá aquí...</h3>
+                    <div id="quiz-options" class="grid gap-3"></div>
+
+                    <div id="quiz-feedback" class="hidden mt-8 p-6 rounded-2xl fade-in border-2">
+                        <p id="feedback-text" class="font-black text-lg mb-2"></p>
+                        <p id="feedback-explanation" class="text-sm opacity-90 mb-4"></p>
+                        <div class="text-[11px] bg-white bg-opacity-40 p-3 rounded-lg italic">
+                            🔎 En el texto dice: "<span id="feedback-source"></span>"
+                        </div>
+                        <button onclick="generateQuestion()" class="mt-6 w-full bg-white text-gray-800 py-3 rounded-xl font-bold shadow-sm hover:shadow-md transition-all">Siguiente Pregunta ➔</button>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <section id="screen-flashcards" class="hidden">
-            <div class="bg-white min-h-[250px] rounded-3xl shadow-xl p-10 flex flex-col justify-center items-center text-center mb-8">
-                <h3 id="fc-front" class="text-2xl font-bold"></h3>
-                <p id="fc-back" class="hidden mt-4 text-indigo-600 text-lg border-t pt-4"></p>
+        <section id="screen-flashcards" class="hidden fade-in">
+            <div class="max-w-md mx-auto">
+                <div id="flashcard" class="bg-white min-h-[350px] rounded-[40px] shadow-xl p-10 flex flex-col justify-center items-center text-center border-b-[12px] border-indigo-100 relative overflow-hidden">
+                    <div id="fc-loading" class="hidden loading-ring mb-4"></div>
+                    <span class="absolute top-6 text-indigo-300 font-black text-[10px] tracking-[4px]">FLASHCARD</span>
+                    <h3 id="fc-front" class="text-2xl font-black text-gray-800"></h3>
+                    <p id="fc-back" class="hidden mt-8 text-indigo-600 text-lg font-medium bg-indigo-50 p-6 rounded-2xl w-full fade-in"></p>
+                </div>
+                <div class="flex gap-4 mt-8">
+                    <button id="btn-fc-reveal" onclick="revealFlashcard()" class="flex-1 bg-white border-2 border-indigo-600 text-indigo-600 py-4 rounded-2xl font-bold">Ver respuesta</button>
+                    <button onclick="generateFlashcard()" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg">Nueva tarjeta</button>
+                </div>
             </div>
-            <button onclick="document.getElementById('fc-back').classList.remove('hidden')" class="w-full bg-indigo-100 text-indigo-700 py-3 rounded-xl font-bold mb-4">Ver respuesta</button>
-            <button onclick="generateFlashcard()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">Nueva tarjeta</button>
         </section>
+
+        <section id="screen-results" class="hidden fade-in text-center py-10">
+            <h2 class="text-4xl font-black mb-4">¡Buen trabajo! 🚀</h2>
+            <div class="text-6xl font-black text-indigo-600 mb-8" id="final-score">0%</div>
+            <div class="bg-white p-8 rounded-3xl shadow-sm mb-10 text-left border-2 border-indigo-50">
+                <h4 class="font-bold text-gray-400 mb-4 uppercase text-xs tracking-widest">Resumen de fallos por sección</h4>
+                <ul id="list-review" class="space-y-3 font-medium"></ul>
+            </div>
+            <button onclick="location.reload()" class="bg-indigo-600 text-white px-12 py-4 rounded-2xl font-bold text-lg">Reiniciar Repaso</button>
+        </section>
+
     </main>
 
     <script>
-        // CONFIGURACIÓN - PEGA TU API KEY AQUÍ
-        const API_KEY = "AIzaSyAiAbTINe_y2TIZve9Dq2tL9x6gjtnJuU4"; // He puesto la que me pasaste
-
-        let extractedText = "";
-        let stats = { correct: 0, total: 0 };
+        // CONFIGURACIÓN
+        const API_KEY = "AIzaSyAiAbTINe_y2TIZve9Dq2tL9x6gjtnJuU4";
+        let pdfText = "";
+        let stats = { correct: 0, total: 0, errorsBySection: {} };
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // Lector de archivos
+        // LECTOR DE ARCHIVOS
         document.getElementById('file-input').addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (!file) return;
-            if (file.type === "application/pdf") {
-                const reader = new FileReader();
-                reader.onload = async function() {
-                    const pdf = await pdfjsLib.getDocument({data: new Uint8Array(this.result)}).promise;
-                    let text = "";
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        text += content.items.map(s => s.str).join(" ");
-                    }
-                    extractedText = text;
+            document.getElementById('label-input').innerText = "⌛ Extrayendo contenido...";
+            
+            try {
+                if (file.type === "application/pdf") {
+                    const reader = new FileReader();
+                    reader.onload = async function() {
+                        const pdf = await pdfjsLib.getDocument({data: new Uint8Array(this.result)}).promise;
+                        let text = "";
+                        for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+                            const page = await pdf.getPage(i);
+                            const content = await page.getTextContent();
+                            text += content.items.map(s => s.str).join(" ");
+                        }
+                        pdfText = text.replace(/["'{}]/g, "").substring(0, 8000);
+                        document.getElementById('file-ready').classList.remove('hidden');
+                        document.getElementById('label-input').classList.add('hidden');
+                    };
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    pdfText = (await file.text()).substring(0, 8000);
                     document.getElementById('file-ready').classList.remove('hidden');
-                };
-                reader.readAsArrayBuffer(file);
-            } else {
-                extractedText = await file.text();
-                document.getElementById('file-ready').classList.remove('hidden');
-            }
+                    document.getElementById('label-input').classList.add('hidden');
+                }
+            } catch (err) { alert("Error al leer el archivo"); }
         });
 
-        async function askGemini(prompt) {
-            // URL limpia y directa
-            const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY.trim()}`;
-            
+        // COMUNICACIÓN CON GEMINI
+        async function callIA(prompt) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
             const response = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: `Contexto: ${extractedText.substring(0, 10000)}. Instrucción: ${prompt}. RESPONDE SOLO EL JSON.` }] }]
+                    contents: [{ parts: [{ text: `Contexto: ${pdfText}. Instrucción: ${prompt}. RESPONDE SOLO JSON PURO.` }] }]
                 })
             });
-
-            if (!response.ok) throw new Error("Error en la conexión con Gemini");
-
             const data = await response.json();
-            const rawText = data.candidates[0].content.parts[0].text;
-            return JSON.parse(rawText.replace(/```json|```/g, "").trim());
+            const cleanText = data.candidates[0].content.parts[0].text.replace(/```json|```/gi, "").trim();
+            return JSON.parse(cleanText);
         }
 
         function startApp() {
             document.getElementById('screen-upload').classList.add('hidden');
             document.getElementById('nav-tabs').classList.remove('hidden');
-            document.getElementById('btn-change-doc').classList.remove('hidden');
             switchTab('quiz');
         }
 
         async function generateQuestion() {
-            document.getElementById('quiz-loading').classList.remove('hidden');
-            document.getElementById('quiz-content').classList.add('hidden');
+            setLoading('quiz', true);
             try {
-                const data = await askGemini("Genera una pregunta de opción múltiple. Formato JSON: { \"section\": \"Título\", \"q\": \"Pregunta?\", \"options\": [\"A\", \"B\", \"C\", \"D\"], \"correct\": 0 }");
+                const data = await callIA(`Genera pregunta de 4 opciones. JSON: {"section":"Tema","q":"Pregunta","o":["A","B","C","D"],"c":0,"e":"Explicación corta","s":"Frase literal"}`);
                 renderQuiz(data);
-            } catch (e) { alert("La IA está tardando, reintenta."); }
-            document.getElementById('quiz-loading').classList.add('hidden');
-            document.getElementById('quiz-content').classList.remove('hidden');
+            } catch (e) { setTimeout(generateQuestion, 2000); }
+            setLoading('quiz', false);
         }
 
         function renderQuiz(data) {
-            document.getElementById('quiz-section').textContent = data.section;
-            document.getElementById('quiz-question').textContent = data.q;
+            document.getElementById('quiz-section').innerText = data.section;
+            document.getElementById('quiz-question').innerText = data.q;
             document.getElementById('quiz-feedback').classList.add('hidden');
-            document.getElementById('btn-next-question').classList.add('hidden');
             const opts = document.getElementById('quiz-options');
             opts.innerHTML = "";
-            data.options.forEach((o, i) => {
-                const b = document.createElement('button');
-                b.className = "w-full text-left p-4 rounded-xl border-2 border-gray-100 bg-gray-50";
-                b.textContent = o;
-                b.onclick = () => {
-                    const isCorrect = i === data.correct;
-                    document.getElementById('quiz-feedback').textContent = isCorrect ? "✅ ¡Correcto!" : "❌ Incorrecto";
-                    document.getElementById('quiz-feedback').className = `p-4 rounded-xl mb-6 ${isCorrect ? 'bg-green-100' : 'bg-red-100'}`;
-                    document.getElementById('quiz-feedback').classList.remove('hidden');
-                    document.getElementById('btn-next-question').classList.remove('hidden');
+            
+            data.o.forEach((o, i) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-2xl border-2 border-gray-100 hover:border-indigo-200 bg-gray-50 font-bold transition-all";
+                btn.innerText = o;
+                btn.onclick = () => {
+                    if(!document.getElementById('quiz-feedback').classList.contains('hidden')) return;
+                    const correct = i === data.correct;
+                    stats.total++;
+                    if(correct) stats.correct++;
+                    else {
+                        stats.errorsBySection[data.section] = (stats.errorsBySection[data.section] || 0) + 1;
+                    }
+                    showFeedback(correct, data);
                 };
-                opts.appendChild(b);
+                opts.appendChild(btn);
             });
         }
 
+        function showFeedback(correct, data) {
+            const fb = document.getElementById('quiz-feedback');
+            fb.classList.remove('hidden');
+            fb.className = `mt-8 p-6 rounded-2xl fade-in border-2 ${correct ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`;
+            document.getElementById('feedback-text').innerText = correct ? "✨ ¡Excelente!" : "❌ No es correcto";
+            document.getElementById('feedback-explanation').innerText = data.e;
+            document.getElementById('feedback-source').innerText = data.s;
+            document.getElementById('score-correct').innerText = stats.correct;
+            document.getElementById('score-wrong').innerText = stats.total - stats.correct;
+        }
+
         async function generateFlashcard() {
-            const data = await askGemini("Genera una flashcard
+            setLoading('fc', true);
+            try {
+                const data = await callIA(`Genera flashcard. JSON: {"front":"Concepto","back":"Definición corta"}`);
+                document.getElementById('fc-front').innerText = data.front;
+                document.getElementById('fc-back').innerText = data.back;
+                document.getElementById('fc-back').classList.add('hidden');
+                document.getElementById('btn-fc-reveal').classList.remove('hidden');
+            } catch (e) { setTimeout(generateFlashcard, 2000); }
+            setLoading('fc', false);
+        }
+
+        function revealFlashcard() {
+            document.getElementById('fc-back').classList.remove('hidden');
+            document.getElementById('btn-fc-reveal').classList.add('hidden');
+        }
+
+        function setLoading(mode, isLoading) {
+            if(mode === 'quiz') {
+                document.getElementById('quiz-loading').classList.toggle('hidden', !isLoading);
+                document.getElementById('quiz-content').classList.toggle('hidden', isLoading);
+            } else {
+                document.getElementById('fc-loading').classList.toggle('hidden', !isLoading);
+                document.getElementById('fc-front').classList.toggle('hidden', isLoading);
+            }
+        }
+
+        function switchTab(tab) {
+            document.getElementById('screen-quiz').classList.toggle('hidden', tab !== 'quiz');
+            document.getElementById('screen-flashcards').classList.toggle('hidden', tab !== 'flashcards');
+            document.getElementById('btn-tab-quiz').className = tab === 'quiz' ? "px-3 py-2 rounded-lg font-bold text-indigo-600 bg-indigo-50" : "px-3 py-2 rounded-lg font-bold text-gray-500 hover:bg-gray-100";
+            document.getElementById('btn-tab-fc').className = tab === 'flashcards' ? "px-3 py-2 rounded-lg font-bold text-indigo-600 bg-indigo-50" : "px-3 py-2 rounded-lg font-bold text-gray-500 hover:bg-gray-100";
+            if(tab === 'quiz' && stats.total === 0) generateQuestion();
+            if(tab === 'flashcards' && !document.getElementById('fc-front').innerText) generateFlashcard();
+        }
+
+        function showResults() {
+            document.getElementById('screen-quiz').classList.add('hidden');
+            document.getElementById('screen-flashcards').classList.add('hidden');
+            document.getElementById('screen-results').classList.remove('hidden');
+            const percent = Math.round((stats.correct / stats.total) * 100) || 0;
+            document.getElementById('final-score').innerText = percent + "%";
+            const list = document.getElementById('list-review');
+            list.innerHTML = Object.entries(stats.errorsBySection).length > 0 ? 
+                Object.entries(stats.errorsBySection).map(([s, e]) => `<li class="flex justify-between border-b pb-2"><span>${s}</span> <span class="text-red-500">${e} errores</span></li>`).join('') :
+                "<li class='text-green-600 font-bold'>✨ ¡Dominas todas las secciones!</li>";
+        }
+    </script>
+</body>
+</html>
