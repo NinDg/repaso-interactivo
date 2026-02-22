@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Study Master - Completo</title>
+    <title>AI Study Master - Estable</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
@@ -108,55 +108,53 @@
     </main>
 
     <script>
-        // CONFIGURACIÓN
         const API_KEY = "AIzaSyDPW1RkQwAoNd6jcSz3MAFgsbhrhAdpubU";
         let pdfText = "";
         let stats = { correct: 0, total: 0, errorsBySection: {} };
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // LECTOR DE ARCHIVOS
         document.getElementById('file-input').addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (!file) return;
-            document.getElementById('label-input').innerText = "⌛ Extrayendo contenido...";
+            document.getElementById('label-input').innerText = "⌛ Leyendo PDF...";
             
             try {
-                if (file.type === "application/pdf") {
-                    const reader = new FileReader();
-                    reader.onload = async function() {
-                        const pdf = await pdfjsLib.getDocument({data: new Uint8Array(this.result)}).promise;
-                        let text = "";
-                        for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
-                            const page = await pdf.getPage(i);
-                            const content = await page.getTextContent();
-                            text += content.items.map(s => s.str).join(" ");
-                        }
-                        pdfText = text.replace(/["'{}]/g, "").substring(0, 8000);
-                        document.getElementById('file-ready').classList.remove('hidden');
-                        document.getElementById('label-input').classList.add('hidden');
-                    };
-                    reader.readAsArrayBuffer(file);
-                } else {
-                    pdfText = (await file.text()).substring(0, 8000);
+                const reader = new FileReader();
+                reader.onload = async function() {
+                    const pdf = await pdfjsLib.getDocument({data: new Uint8Array(this.result)}).promise;
+                    let text = "";
+                    for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        text += content.items.map(s => s.str).join(" ");
+                    }
+                    pdfText = text.replace(/["'{}]/g, "").substring(0, 6000);
                     document.getElementById('file-ready').classList.remove('hidden');
                     document.getElementById('label-input').classList.add('hidden');
-                }
-            } catch (err) { alert("Error al leer el archivo"); }
+                };
+                reader.readAsArrayBuffer(file);
+            } catch (err) { alert("Error al leer el PDF"); }
         });
 
-        // COMUNICACIÓN CON GEMINI
         async function callIA(prompt) {
+            // CAMBIO CLAVE: Dirección v1 (No v1beta)
             const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+            
             const response = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: `Contexto: ${pdfText}. Instrucción: ${prompt}. RESPONDE SOLO JSON PURO.` }] }]
+                    contents: [{ parts: [{ text: `Analiza: ${pdfText}. Tarea: ${prompt}. RESPONDE SOLO JSON PURO SIN MARKDOWN.` }] }]
                 })
             });
+
+            if (!response.ok) throw new Error("Error en la API");
+
             const data = await response.json();
-            const cleanText = data.candidates[0].content.parts[0].text.replace(/```json|```/gi, "").trim();
-            return JSON.parse(cleanText);
+            let rawText = data.candidates[0].content.parts[0].text;
+            // Limpieza profunda de JSON
+            let cleanJson = rawText.replace(/```json|```/gi, "").trim();
+            return JSON.parse(cleanJson);
         }
 
         function startApp() {
@@ -168,9 +166,12 @@
         async function generateQuestion() {
             setLoading('quiz', true);
             try {
-                const data = await callIA(`Genera pregunta de 4 opciones. JSON: {"section":"Tema","q":"Pregunta","o":["A","B","C","D"],"c":0,"e":"Explicación corta","s":"Frase literal"}`);
+                const data = await callIA(`Genera pregunta de 4 opciones. JSON: {"section":"Tema","q":"Pregunta","o":["A","B","C","D"],"correct":0,"e":"Explicación","s":"Fuente"}`);
                 renderQuiz(data);
-            } catch (e) { setTimeout(generateQuestion, 2000); }
+            } catch (e) { 
+                console.error(e);
+                setTimeout(generateQuestion, 3000); 
+            }
             setLoading('quiz', false);
         }
 
@@ -186,7 +187,9 @@
                 btn.className = "w-full text-left p-4 rounded-2xl border-2 border-gray-100 hover:border-indigo-200 bg-gray-50 font-bold transition-all";
                 btn.innerText = o;
                 btn.onclick = () => {
+                    // Evitar múltiples clics
                     if(!document.getElementById('quiz-feedback').classList.contains('hidden')) return;
+                    
                     const correct = i === data.correct;
                     stats.total++;
                     if(correct) stats.correct++;
@@ -213,12 +216,12 @@
         async function generateFlashcard() {
             setLoading('fc', true);
             try {
-                const data = await callIA(`Genera flashcard. JSON: {"front":"Concepto","back":"Definición corta"}`);
+                const data = await callIA(`Genera flashcard. JSON: {"front":"Concepto","back":"Definición"}`);
                 document.getElementById('fc-front').innerText = data.front;
                 document.getElementById('fc-back').innerText = data.back;
                 document.getElementById('fc-back').classList.add('hidden');
                 document.getElementById('btn-fc-reveal').classList.remove('hidden');
-            } catch (e) { setTimeout(generateFlashcard, 2000); }
+            } catch (e) { setTimeout(generateFlashcard, 3000); }
             setLoading('fc', false);
         }
 
@@ -260,5 +263,3 @@
     </script>
 </body>
 </html>
-
-
