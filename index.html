@@ -1,148 +1,95 @@
-<!DOCTYPE html>
+YPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Study Master - Live</title>
+    <title>AI Study Master - Ultra Fast</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
-
-    <header class="bg-white shadow-sm p-4 sticky top-0 z-10">
-        <div class="max-w-4xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold text-indigo-600">🎓 StudyAI</h1>
-            <div id="nav-tabs" class="hidden flex gap-4">
-                <button onclick="switchTab('quiz')" id="tab-quiz" class="px-4 py-2 font-medium border-b-2 border-indigo-600 text-indigo-600">📝 Quiz</button>
-                <button onclick="switchTab('flashcards')" id="tab-fc" class="px-4 py-2 font-medium text-gray-500 hover:text-indigo-600">🎴 Flashcards</button>
-            </div>
-            <button id="btn-change-doc" class="hidden text-sm text-gray-500 hover:underline" onclick="location.reload()">📄 Cambiar documento</button>
+<body class="bg-slate-50 min-h-screen p-4">
+    <div id="app" class="max-w-2xl mx-auto bg-white shadow-2xl rounded-3xl p-8 mt-10">
+        <h1 class="text-2xl font-bold text-center text-indigo-600 mb-8">🎓 Repaso IA</h1>
+        
+        <div id="setup">
+            <input type="file" id="file-input" class="mb-4 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+            <button onclick="iniciar()" id="btn-iniciar" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hidden">🚀 Empezar ahora</button>
         </div>
-    </header>
 
-    <main class="max-w-4xl mx-auto p-6">
-        <section id="screen-upload" class="bg-white rounded-2xl shadow-xl p-10 text-center border-2 border-dashed border-gray-200 mt-10">
-            <div class="mb-6 text-6xl">📄</div>
-            <h2 class="text-2xl font-bold mb-4">Sube tu documento de curso</h2>
-            <input type="file" id="file-input" class="hidden" accept=".pdf,.txt,.md">
-            <label for="file-input" class="bg-indigo-600 text-white px-8 py-3 rounded-xl cursor-pointer hover:bg-indigo-700 font-semibold">Seleccionar archivo</label>
-            <div id="file-ready" class="hidden mt-8 p-4 bg-green-50 rounded-lg inline-block border border-green-200 text-green-700">
-                ✅ Documento cargado correctamente
-                <button onclick="startApp()" class="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold block mx-auto">Empezar Repaso</button>
+        <div id="game" class="hidden">
+            <div id="loading" class="text-center py-10 text-indigo-500 font-bold animate-bounce">🤔 Pensando pregunta...</div>
+            <div id="content" class="hidden">
+                <p id="pregunta" class="text-xl font-bold mb-6"></p>
+                <div id="opciones" class="grid gap-3"></div>
+                <button onclick="generar()" class="mt-6 w-full text-indigo-600 font-bold py-2 border-2 border-indigo-600 rounded-xl">Siguiente pregunta ➔</button>
             </div>
-        </section>
-
-        <section id="screen-quiz" class="hidden">
-            <div id="quiz-loading" class="hidden text-center py-20 text-indigo-600 animate-pulse font-medium">🧠 La IA está analizando tu PDF...</div>
-            <div id="quiz-content" class="bg-white p-8 rounded-2xl shadow-md">
-                <span id="quiz-section" class="text-xs font-bold text-indigo-400 block mb-2 tracking-widest uppercase"></span>
-                <h3 id="quiz-question" class="text-xl font-bold mb-6"></h3>
-                <div id="quiz-options" class="space-y-3 mb-6"></div>
-                <div id="quiz-feedback" class="hidden p-4 rounded-xl mb-6 font-medium"></div>
-                <button id="btn-next-question" onclick="generateQuestion()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hidden">Siguiente pregunta →</button>
-            </div>
-        </section>
-
-        <section id="screen-flashcards" class="hidden">
-            <div class="bg-white min-h-[250px] rounded-3xl shadow-xl p-10 flex flex-col justify-center items-center text-center mb-8">
-                <h3 id="fc-front" class="text-2xl font-bold"></h3>
-                <p id="fc-back" class="hidden mt-4 text-indigo-600 text-lg border-t pt-4"></p>
-            </div>
-            <button onclick="document.getElementById('fc-back').classList.remove('hidden')" class="w-full bg-indigo-100 text-indigo-700 py-3 rounded-xl font-bold mb-4">Ver respuesta</button>
-            <button onclick="generateFlashcard()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">Nueva tarjeta</button>
-        </section>
-    </main>
+        </div>
+    </div>
 
     <script>
-        // CONFIGURACIÓN - PEGA TU API KEY AQUÍ
-        const API_KEY = "AIzaSyAiAbTINe_y2TIZve9Dq2tL9x6gjtnJuU4"; // He puesto la que me pasaste
-
-        let extractedText = "";
-        let stats = { correct: 0, total: 0 };
+        // TU CLAVE YA PUESTA
+        const KEY = "AIzaSyAiAbTINe_y2TIZve9Dq2tL9x6gjtnJuU4";
+        let textoBase = "";
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // Lector de archivos
-        document.getElementById('file-input').addEventListener('change', async function(e) {
+        document.getElementById('file-input').onchange = async (e) => {
             const file = e.target.files[0];
-            if (!file) return;
             if (file.type === "application/pdf") {
                 const reader = new FileReader();
                 reader.onload = async function() {
                     const pdf = await pdfjsLib.getDocument({data: new Uint8Array(this.result)}).promise;
-                    let text = "";
-                    for (let i = 1; i <= pdf.numPages; i++) {
+                    for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) { // Solo 5 pags para ir rápido
                         const page = await pdf.getPage(i);
                         const content = await page.getTextContent();
-                        text += content.items.map(s => s.str).join(" ");
+                        textoBase += content.items.map(s => s.str).join(" ");
                     }
-                    extractedText = text;
-                    document.getElementById('file-ready').classList.remove('hidden');
+                    document.getElementById('btn-iniciar').classList.remove('hidden');
                 };
                 reader.readAsArrayBuffer(file);
             } else {
-                extractedText = await file.text();
-                document.getElementById('file-ready').classList.remove('hidden');
+                textoBase = await file.text();
+                document.getElementById('btn-iniciar').classList.remove('hidden');
             }
-        });
+        };
 
-        async function askGemini(prompt) {
-            // URL limpia y directa
-            const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY.trim()}`;
+        function iniciar() {
+            document.getElementById('setup').classList.add('hidden');
+            document.getElementById('game').classList.remove('hidden');
+            generar();
+        }
+
+        async function generar() {
+            document.getElementById('content').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
             
-            const response = await fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: `Contexto: ${extractedText.substring(0, 10000)}. Instrucción: ${prompt}. RESPONDE SOLO EL JSON.` }] }]
-                })
-            });
-
-            if (!response.ok) throw new Error("Error en la conexión con Gemini");
-
-            const data = await response.json();
-            const rawText = data.candidates[0].content.parts[0].text;
-            return JSON.parse(rawText.replace(/```json|```/g, "").trim());
-        }
-
-        function startApp() {
-            document.getElementById('screen-upload').classList.add('hidden');
-            document.getElementById('nav-tabs').classList.remove('hidden');
-            document.getElementById('btn-change-doc').classList.remove('hidden');
-            switchTab('quiz');
-        }
-
-        async function generateQuestion() {
-            document.getElementById('quiz-loading').classList.remove('hidden');
-            document.getElementById('quiz-content').classList.add('hidden');
             try {
-                const data = await askGemini("Genera una pregunta de opción múltiple. Formato JSON: { \"section\": \"Título\", \"q\": \"Pregunta?\", \"options\": [\"A\", \"B\", \"C\", \"D\"], \"correct\": 0 }");
-                renderQuiz(data);
-            } catch (e) { alert("La IA está tardando, reintenta."); }
-            document.getElementById('quiz-loading').classList.add('hidden');
-            document.getElementById('quiz-content').classList.remove('hidden');
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${KEY}`, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `Basado en: ${textoBase.substring(0, 5000)}. Crea pregunta de 3 opciones. Responde SOLO JSON: {"p":"pregunta","o":["A","B","C"],"c":0}` }] }]
+                    })
+                });
+                
+                const data = await res.json();
+                const json = JSON.parse(data.candidates[0].content.parts[0].text.replace(/```json|```/g, ""));
+                
+                document.getElementById('pregunta').innerText = json.p;
+                const opts = document.getElementById('opciones');
+                opts.innerHTML = "";
+                json.o.forEach((o, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = "p-4 bg-slate-100 rounded-xl hover:bg-indigo-100 text-left transition";
+                    btn.innerText = o;
+                    btn.onclick = () => alert(i === json.c ? "✅ ¡Correcto!" : "❌ No es correcta");
+                    opts.appendChild(btn);
+                });
+                
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('content').classList.remove('hidden');
+            } catch (e) {
+                alert("La IA está ocupada. Pulsa OK para reintentar.");
+                generar();
+            }
         }
-
-        function renderQuiz(data) {
-            document.getElementById('quiz-section').textContent = data.section;
-            document.getElementById('quiz-question').textContent = data.q;
-            document.getElementById('quiz-feedback').classList.add('hidden');
-            document.getElementById('btn-next-question').classList.add('hidden');
-            const opts = document.getElementById('quiz-options');
-            opts.innerHTML = "";
-            data.options.forEach((o, i) => {
-                const b = document.createElement('button');
-                b.className = "w-full text-left p-4 rounded-xl border-2 border-gray-100 bg-gray-50";
-                b.textContent = o;
-                b.onclick = () => {
-                    const isCorrect = i === data.correct;
-                    document.getElementById('quiz-feedback').textContent = isCorrect ? "✅ ¡Correcto!" : "❌ Incorrecto";
-                    document.getElementById('quiz-feedback').className = `p-4 rounded-xl mb-6 ${isCorrect ? 'bg-green-100' : 'bg-red-100'}`;
-                    document.getElementById('quiz-feedback').classList.remove('hidden');
-                    document.getElementById('btn-next-question').classList.remove('hidden');
-                };
-                opts.appendChild(b);
-            });
-        }
-
-        async function generateFlashcard() {
-            const data = await askGemini("Genera una flashcard
+    </script>
+</body>
+</html>
